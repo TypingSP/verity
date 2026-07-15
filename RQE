@@ -1,11 +1,16 @@
+-- // Roblox Query Event (RQE) // --
+-- 远程事件扫描器 + UI 管理器
+
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+-- ========== 防重复加载 ==========
 if CoreGui:FindFirstChild("RQEGui") then
 	CoreGui.RQEGui:Destroy()
 end
 
+-- ========== 扫描函数 ==========
 local function ScanRemotes()
 	local events = {}
 	local functions = {}
@@ -19,6 +24,7 @@ local function ScanRemotes()
 	return events, functions
 end
 
+-- ========== 生成示例代码 ==========
 local function GenerateCode(obj)
 	local name = obj.Name
 	local fullName = obj:GetFullName()
@@ -43,12 +49,14 @@ local function GenerateCode(obj)
 	return code
 end
 
+-- ========== 创建主 GUI ==========
 local RQEGui = Instance.new("ScreenGui")
 RQEGui.Name = "RQEGui"
 RQEGui.Parent = CoreGui
 RQEGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 RQEGui.ResetOnSpawn = false
 
+-- ========== 主窗口 ==========
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 300, 0, 350)
@@ -70,6 +78,7 @@ MainStroke.Color = Color3.fromRGB(70, 70, 100)
 MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
+-- ========== 标题栏 ==========
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 32)
 TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -98,6 +107,7 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TitleBar
 
+-- 彩虹标题动画
 task.spawn(function()
 	while true do
 		for hue = 0, 1, 0.006 do
@@ -107,6 +117,7 @@ task.spawn(function()
 	end
 end)
 
+-- 关闭按钮
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 22, 0, 22)
 CloseBtn.Position = UDim2.new(1, -28, 0, 5)
@@ -125,6 +136,7 @@ CloseBtn.MouseButton1Click:Connect(function()
 	RQEGui:Destroy()
 end)
 
+-- 最小化按钮
 local MinBtn = Instance.new("TextButton")
 MinBtn.Size = UDim2.new(0, 22, 0, 22)
 MinBtn.Position = UDim2.new(1, -54, 0, 5)
@@ -139,6 +151,7 @@ local MinCorner = Instance.new("UICorner")
 MinCorner.CornerRadius = UDim.new(0, 5)
 MinCorner.Parent = MinBtn
 
+-- ========== 统计标签 ==========
 local StatsLabel = Instance.new("TextLabel")
 StatsLabel.Size = UDim2.new(0.92, 0, 0, 16)
 StatsLabel.Position = UDim2.new(0.04, 0, 0, 34)
@@ -150,6 +163,7 @@ StatsLabel.Font = Enum.Font.Gotham
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatsLabel.Parent = MainFrame
 
+-- ========== 滚动列表容器 ==========
 local ScrollFrame = Instance.new("ScrollingFrame")
 ScrollFrame.Size = UDim2.new(0.92, 0, 0, 250)
 ScrollFrame.Position = UDim2.new(0.04, 0, 0, 54)
@@ -172,6 +186,7 @@ local ListLayout = Instance.new("UIListLayout")
 ListLayout.Padding = UDim.new(0, 2)
 ListLayout.Parent = ScrollFrame
 
+-- ========== 底部按钮栏 ==========
 local SaveAllBtn = Instance.new("TextButton")
 SaveAllBtn.Size = UDim2.new(0.92, 0, 0, 26)
 SaveAllBtn.Position = UDim2.new(0.04, 0, 0, 308)
@@ -194,6 +209,7 @@ SaveAllBtn.MouseLeave:Connect(function()
 	TweenService:Create(SaveAllBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 60)}):Play()
 end)
 
+-- ========== 悬浮窗 (缩小态) ==========
 local FloatFrame = Instance.new("Frame")
 FloatFrame.Name = "FloatFrame"
 FloatFrame.Size = UDim2.new(0, 48, 0, 48)
@@ -222,6 +238,7 @@ FloatLabel.TextSize = 14
 FloatLabel.Font = Enum.Font.GothamBlack
 FloatLabel.Parent = FloatFrame
 
+-- 悬浮窗彩虹动画
 task.spawn(function()
 	while true do
 		for hue = 0, 1, 0.006 do
@@ -232,6 +249,7 @@ task.spawn(function()
 	end
 end)
 
+-- ========== 悬浮窗拖动 + 点击逻辑（修复手机触摸） ==========
 local floatDragging = false
 local floatDragStartPos = nil
 local floatFrameStartPos = nil
@@ -275,6 +293,7 @@ FloatFrame.InputEnded:Connect(function(input)
 	end
 end)
 
+-- ========== 详情弹窗 ==========
 local DetailFrame = Instance.new("Frame")
 DetailFrame.Name = "DetailFrame"
 DetailFrame.Size = UDim2.new(0, 340, 0, 320)
@@ -296,6 +315,7 @@ DetailStroke.Color = Color3.fromRGB(70, 70, 110)
 DetailStroke.Thickness = 1.5
 DetailStroke.Parent = DetailFrame
 
+-- 详情标题栏
 local DetailTitleBar = Instance.new("Frame")
 DetailTitleBar.Size = UDim2.new(1, 0, 0, 30)
 DetailTitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -324,6 +344,7 @@ DetailTitleLabel.Font = Enum.Font.GothamBold
 DetailTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 DetailTitleLabel.Parent = DetailTitleBar
 
+-- 详情关闭按钮
 local DetailCloseBtn = Instance.new("TextButton")
 DetailCloseBtn.Size = UDim2.new(0, 22, 0, 22)
 DetailCloseBtn.Position = UDim2.new(1, -28, 0, 4)
@@ -342,6 +363,7 @@ DetailCloseBtn.MouseButton1Click:Connect(function()
 	DetailFrame.Visible = false
 end)
 
+-- 事件类型标签
 local TypeTag = Instance.new("TextLabel")
 TypeTag.Size = UDim2.new(0.35, 0, 0, 20)
 TypeTag.Position = UDim2.new(0.04, 0, 0, 38)
@@ -356,6 +378,7 @@ local TypeTagCorner = Instance.new("UICorner")
 TypeTagCorner.CornerRadius = UDim.new(0, 5)
 TypeTagCorner.Parent = TypeTag
 
+-- 事件路径
 local PathLabel = Instance.new("TextLabel")
 PathLabel.Size = UDim2.new(0.92, 0, 0, 16)
 PathLabel.Position = UDim2.new(0.04, 0, 0, 64)
@@ -367,6 +390,7 @@ PathLabel.Font = Enum.Font.Gotham
 PathLabel.TextXAlignment = Enum.TextXAlignment.Left
 PathLabel.Parent = DetailFrame
 
+-- 代码显示区
 local CodeBox = Instance.new("TextBox")
 CodeBox.Size = UDim2.new(0.92, 0, 0, 140)
 CodeBox.Position = UDim2.new(0.04, 0, 0, 86)
@@ -389,6 +413,7 @@ CodeStroke.Color = Color3.fromRGB(50, 50, 75)
 CodeStroke.Thickness = 1
 CodeStroke.Parent = CodeBox
 
+-- 代码区提示
 local CodeTip = Instance.new("TextLabel")
 CodeTip.Size = UDim2.new(0.92, 0, 0, 14)
 CodeTip.Position = UDim2.new(0.04, 0, 0, 232)
@@ -400,6 +425,7 @@ CodeTip.Font = Enum.Font.Gotham
 CodeTip.TextXAlignment = Enum.TextXAlignment.Left
 CodeTip.Parent = DetailFrame
 
+-- 详情底部按钮
 local function CreateDetailBtn(text, xPos, color)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(0.30, 0, 0, 24)
@@ -430,6 +456,7 @@ local CopyPathBtn = CreateDetailBtn("复制路径", 0.04, Color3.fromRGB(50, 100
 local CopyCodeBtn = CreateDetailBtn("复制代码", 0.36, Color3.fromRGB(50, 150, 100))
 local ExecuteBtn = CreateDetailBtn("执行代码", 0.68, Color3.fromRGB(180, 80, 50))
 
+-- 详情状态
 local DetailStatus = Instance.new("TextLabel")
 DetailStatus.Size = UDim2.new(0.92, 0, 0, 16)
 DetailStatus.Position = UDim2.new(0.04, 0, 0, 288)
@@ -441,12 +468,14 @@ DetailStatus.Font = Enum.Font.Gotham
 DetailStatus.TextXAlignment = Enum.TextXAlignment.Left
 DetailStatus.Parent = DetailFrame
 
+-- ========== 核心逻辑 ==========
 local allEvents = {}
 local allFunctions = {}
 local listItems = {}
 local selectedObj = nil
 
 local function PopulateList(filter)
+	-- 清除旧项
 	for _, item in ipairs(listItems) do
 		item:Destroy()
 	end
@@ -497,6 +526,7 @@ local function PopulateList(filter)
 				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 				nameLabel.Parent = item
 
+				-- 悬停效果
 				item.MouseEnter:Connect(function()
 					if selectedObj ~= obj then
 						TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(38, 38, 52)}):Play()
@@ -508,17 +538,21 @@ local function PopulateList(filter)
 					end
 				end)
 
+				-- 点击选中 -> 打开详情弹窗
 				item.MouseButton1Click:Connect(function()
 					selectedObj = obj
 
+					-- 更新所有项颜色
 					for _, entry in ipairs(listItems) do
 						TweenService:Create(entry.button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play()
 						entry.nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
 					end
 
+					-- 高亮当前
 					TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(40, 50, 90)}):Play()
 					nameLabel.TextColor3 = Color3.fromRGB(120, 180, 255)
 
+					-- 打开详情弹窗
 					DetailFrame.Visible = true
 					DetailTitleLabel.Text = obj.Name
 					PathLabel.Text = "路径：" .. obj:GetFullName()
@@ -549,6 +583,7 @@ local function PopulateList(filter)
 	ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalItems * 28)
 end
 
+-- 复制路径
 CopyPathBtn.MouseButton1Click:Connect(function()
 	if selectedObj then
 		local ok = pcall(function()
@@ -564,6 +599,7 @@ CopyPathBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- 复制代码
 CopyCodeBtn.MouseButton1Click:Connect(function()
 	if selectedObj then
 		local code = GenerateCode(selectedObj)
@@ -580,6 +616,7 @@ CopyCodeBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- 执行代码
 ExecuteBtn.MouseButton1Click:Connect(function()
 	if selectedObj then
 		local code = CodeBox.Text
@@ -596,35 +633,26 @@ ExecuteBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- 保存全部（指定到 Delta 文件夹，没有则创建）
 SaveAllBtn.MouseButton1Click:Connect(function()
 	local events, functions = ScanRemotes()
-	local content = "===== Roblox Query Event - 扫描结果 =====
-"
-	content = content .. "PlaceId: " .. game.PlaceId .. "
-"
-	content = content .. "时间: " .. os.date("%Y-%m-%d %H:%M:%S") .. "
-"
-	content = content .. string.format("事件: %d | 函数: %d
-
-", #events, #functions)
+	local content = "===== Roblox Query Event - 扫描结果 =====\n"
+	content = content .. "PlaceId: " .. game.PlaceId .. "\n"
+	content = content .. "时间: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+	content = content .. string.format("事件: %d | 函数: %d\n\n", #events, #functions)
 
 	if #events > 0 then
-		content = content .. "--- RemoteEvents ---
-"
+		content = content .. "--- RemoteEvents ---\n"
 		for _, e in ipairs(events) do
-			content = content .. e:GetFullName() .. "
-"
+			content = content .. e:GetFullName() .. "\n"
 		end
-		content = content .. "
-"
+		content = content .. "\n"
 	end
 
 	if #functions > 0 then
-		content = content .. "--- RemoteFunctions ---
-"
+		content = content .. "--- RemoteFunctions ---\n"
 		for _, f in ipairs(functions) do
-			content = content .. f:GetFullName() .. "
-"
+			content = content .. f:GetFullName() .. "\n"
 		end
 	end
 
@@ -642,6 +670,7 @@ SaveAllBtn.MouseButton1Click:Connect(function()
 		StatsLabel.TextColor3 = Color3.fromRGB(80, 180, 255)
 		StatsLabel.Text = "已保存到：" .. fileName
 	else
+		-- 回退：尝试保存到默认位置
 		local fallbackOk = pcall(function()
 			writefile("RQEScan_" .. game.PlaceId .. ".txt", content)
 		end)
@@ -655,9 +684,11 @@ SaveAllBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- ========== 最小化/还原逻辑 ==========
 MinBtn.MouseButton1Click:Connect(function()
 	MainFrame.Visible = false
 	FloatFrame.Visible = true
 end)
 
+-- ========== 初始扫描 ==========
 PopulateList()
