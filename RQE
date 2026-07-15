@@ -1,1 +1,663 @@
-local CoreGui = game:GetService("CoreGui") local TweenService = game:GetService("TweenService") local UserInputService = game:GetService("UserInputService") if CoreGui:FindFirstChild("RQEGui") then 	CoreGui.RQEGui:Destroy() end local function ScanRemotes() 	local events = {} 	local functions = {} 	for _, obj in ipairs(game:GetDescendants()) do 		if obj:IsA("RemoteEvent") then 			table.insert(events, obj) 		elseif obj:IsA("RemoteFunction") then 			table.insert(functions, obj) 		end 	end 	return events, functions end local function GenerateCode(obj) 	local name = obj.Name 	local fullName = obj:GetFullName() 	local code = "" 	if obj:IsA("RemoteEvent") then 		code = "-- 触发远程事件: " .. name .. "\n" 			.. "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")\n" 			.. "local event = " .. fullName:gsub("%.", ":WaitForChild(\"") .. "\")\n" 			.. "-- 简写路径:\n" 			.. "-- local event = ReplicatedStorage:WaitForChild(\"" .. name .. "\")\n\n" 			.. "event:FireServer() -- 可传入参数\n" 	else 		code = "-- 调用远程函数: " .. name .. "\n" 			.. "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")\n" 			.. "local func = " .. fullName:gsub("%.", ":WaitForChild(\"") .. "\")\n" 			.. "-- 简写路径:\n" 			.. "-- local func = ReplicatedStorage:WaitForChild(\"" .. name .. "\")\n\n" 			.. "local result = func:InvokeServer() -- 可传入参数\n" 	end 	return code end local RQEGui = Instance.new("ScreenGui") RQEGui.Name = "RQEGui" RQEGui.Parent = CoreGui RQEGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling RQEGui.ResetOnSpawn = false local MainFrame = Instance.new("Frame") MainFrame.Name = "MainFrame" MainFrame.Size = UDim2.new(0, 300, 0, 350) MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175) MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 25) MainFrame.BorderSizePixel = 0 MainFrame.Active = true MainFrame.Draggable = true MainFrame.ClipsDescendants = true MainFrame.Visible = true MainFrame.Parent = RQEGui local MainCorner = Instance.new("UICorner") MainCorner.CornerRadius = UDim.new(0, 10) MainCorner.Parent = MainFrame local MainStroke = Instance.new("UIStroke") MainStroke.Color = Color3.fromRGB(70, 70, 100) MainStroke.Thickness = 1.5 MainStroke.Parent = MainFrame local TitleBar = Instance.new("Frame") TitleBar.Size = UDim2.new(1, 0, 0, 32) TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35) TitleBar.BorderSizePixel = 0 TitleBar.Parent = MainFrame local TitleCorner = Instance.new("UICorner") TitleCorner.CornerRadius = UDim.new(0, 10) TitleCorner.Parent = TitleBar local TitleBarFill = Instance.new("Frame") TitleBarFill.Size = UDim2.new(1, 0, 0, 10) TitleBarFill.Position = UDim2.new(0, 0, 1, -10) TitleBarFill.BackgroundColor3 = Color3.fromRGB(25, 25, 35) TitleBarFill.BorderSizePixel = 0 TitleBarFill.Parent = TitleBar local TitleLabel = Instance.new("TextLabel") TitleLabel.Size = UDim2.new(1, -80, 1, 0) TitleLabel.Position = UDim2.new(0, 12, 0, 0) TitleLabel.BackgroundTransparency = 1 TitleLabel.Text = "Roblox Query Event" TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 240) TitleLabel.TextSize = 13 TitleLabel.Font = Enum.Font.GothamBold TitleLabel.TextXAlignment = Enum.TextXAlignment.Left TitleLabel.Parent = TitleBar task.spawn(function() 	while true do 		for hue = 0, 1, 0.006 do 			TitleLabel.TextColor3 = Color3.fromHSV(hue, 0.5, 1) 			task.wait(0.03) 		end 	end end) local CloseBtn = Instance.new("TextButton") CloseBtn.Size = UDim2.new(0, 22, 0, 22) CloseBtn.Position = UDim2.new(1, -28, 0, 5) CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) CloseBtn.Text = "×" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.TextSize = 14 CloseBtn.Font = Enum.Font.GothamBold CloseBtn.Parent = TitleBar local CloseCorner = Instance.new("UICorner") CloseCorner.CornerRadius = UDim.new(0, 5) CloseCorner.Parent = CloseBtn CloseBtn.MouseButton1Click:Connect(function() 	RQEGui:Destroy() end) local MinBtn = Instance.new("TextButton") MinBtn.Size = UDim2.new(0, 22, 0, 22) MinBtn.Position = UDim2.new(1, -54, 0, 5) MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80) MinBtn.Text = "—" MinBtn.TextColor3 = Color3.fromRGB(220, 220, 240) MinBtn.TextSize = 14 MinBtn.Font = Enum.Font.GothamBold MinBtn.Parent = TitleBar local MinCorner = Instance.new("UICorner") MinCorner.CornerRadius = UDim.new(0, 5) MinCorner.Parent = MinBtn local StatsLabel = Instance.new("TextLabel") StatsLabel.Size = UDim2.new(0.92, 0, 0, 16) StatsLabel.Position = UDim2.new(0.04, 0, 0, 34) StatsLabel.BackgroundTransparency = 1 StatsLabel.Text = "正在扫描..." StatsLabel.TextColor3 = Color3.fromRGB(100, 200, 255) StatsLabel.TextSize = 10 StatsLabel.Font = Enum.Font.Gotham StatsLabel.TextXAlignment = Enum.TextXAlignment.Left StatsLabel.Parent = MainFrame local ScrollFrame = Instance.new("ScrollingFrame") ScrollFrame.Size = UDim2.new(0.92, 0, 0, 250) ScrollFrame.Position = UDim2.new(0.04, 0, 0, 54) ScrollFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30) ScrollFrame.BorderSizePixel = 0 ScrollFrame.ScrollBarThickness = 4 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 120) ScrollFrame.Parent = MainFrame local ScrollCorner = Instance.new("UICorner") ScrollCorner.CornerRadius = UDim.new(0, 5) ScrollCorner.Parent = ScrollFrame local ScrollStroke = Instance.new("UIStroke") ScrollStroke.Color = Color3.fromRGB(50, 50, 75) ScrollStroke.Thickness = 1 ScrollStroke.Parent = ScrollFrame local ListLayout = Instance.new("UIListLayout") ListLayout.Padding = UDim.new(0, 2) ListLayout.Parent = ScrollFrame local SaveAllBtn = Instance.new("TextButton") SaveAllBtn.Size = UDim2.new(0.92, 0, 0, 26) SaveAllBtn.Position = UDim2.new(0.04, 0, 0, 308) SaveAllBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60) SaveAllBtn.Text = "保存全部为 TXT" SaveAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255) SaveAllBtn.Font = Enum.Font.Gotham SaveAllBtn.TextSize = 11 SaveAllBtn.AutoButtonColor = false SaveAllBtn.Parent = MainFrame local SaveCorner = Instance.new("UICorner") SaveCorner.CornerRadius = UDim.new(0, 5) SaveCorner.Parent = SaveAllBtn SaveAllBtn.MouseEnter:Connect(function() 	TweenService:Create(SaveAllBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(55, 55, 80)}):Play() end) SaveAllBtn.MouseLeave:Connect(function() 	TweenService:Create(SaveAllBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 60)}):Play() end) local FloatFrame = Instance.new("Frame") FloatFrame.Name = "FloatFrame" FloatFrame.Size = UDim2.new(0, 48, 0, 48) FloatFrame.Position = UDim2.new(1, -66, 1, -66) FloatFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45) FloatFrame.BorderSizePixel = 0 FloatFrame.Active = true FloatFrame.Visible = false FloatFrame.Parent = RQEGui local FloatCorner = Instance.new("UICorner") FloatCorner.CornerRadius = UDim.new(0, 12) FloatCorner.Parent = FloatFrame local FloatStroke = Instance.new("UIStroke") FloatStroke.Color = Color3.fromRGB(100, 100, 160) FloatStroke.Thickness = 2 FloatStroke.Parent = FloatFrame local FloatLabel = Instance.new("TextLabel") FloatLabel.Size = UDim2.new(1, 0, 1, 0) FloatLabel.BackgroundTransparency = 1 FloatLabel.Text = "RQE" FloatLabel.TextColor3 = Color3.fromRGB(150, 200, 255) FloatLabel.TextSize = 14 FloatLabel.Font = Enum.Font.GothamBlack FloatLabel.Parent = FloatFrame task.spawn(function() 	while true do 		for hue = 0, 1, 0.006 do 			FloatLabel.TextColor3 = Color3.fromHSV(hue, 0.6, 1) 			FloatStroke.Color = Color3.fromHSV(hue, 0.4, 0.8) 			task.wait(0.03) 		end 	end end) local floatDragging = false local floatDragStartPos = nil local floatFrameStartPos = nil local floatClickStart = nil local function isValidInput(inputType) 	return inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch end FloatFrame.InputBegan:Connect(function(input) 	if isValidInput(input.UserInputType) then 		floatDragStartPos = Vector2.new(input.Position.X, input.Position.Y) 		floatFrameStartPos = Vector2.new(FloatFrame.AbsolutePosition.X, FloatFrame.AbsolutePosition.Y) 		floatClickStart = floatDragStartPos 		floatDragging = true 	end end) FloatFrame.InputChanged:Connect(function(input) 	if floatDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 		local delta = Vector2.new(input.Position.X, input.Position.Y) - floatDragStartPos 		local newX = floatFrameStartPos.X + delta.X 		local newY = floatFrameStartPos.Y + delta.Y 		FloatFrame.Position = UDim2.new(0, newX, 0, newY) 	end end) FloatFrame.InputEnded:Connect(function(input) 	if isValidInput(input.UserInputType) then 		if floatClickStart then 			local delta = Vector2.new(input.Position.X, input.Position.Y) - floatClickStart 			if delta.Magnitude < 5 then 				MainFrame.Visible = true 				FloatFrame.Visible = false 			end 		end 		floatDragging = false 		floatClickStart = nil 		floatDragStartPos = nil 		floatFrameStartPos = nil 	end end) local DetailFrame = Instance.new("Frame") DetailFrame.Name = "DetailFrame" DetailFrame.Size = UDim2.new(0, 340, 0, 320) DetailFrame.Position = UDim2.new(0.5, -170, 0.5, -160) DetailFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28) DetailFrame.BorderSizePixel = 0 DetailFrame.Active = true DetailFrame.Draggable = true DetailFrame.ClipsDescendants = true DetailFrame.Visible = false DetailFrame.Parent = RQEGui local DetailCorner = Instance.new("UICorner") DetailCorner.CornerRadius = UDim.new(0, 10) DetailCorner.Parent = DetailFrame local DetailStroke = Instance.new("UIStroke") DetailStroke.Color = Color3.fromRGB(70, 70, 110) DetailStroke.Thickness = 1.5 DetailStroke.Parent = DetailFrame local DetailTitleBar = Instance.new("Frame") DetailTitleBar.Size = UDim2.new(1, 0, 0, 30) DetailTitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 40) DetailTitleBar.BorderSizePixel = 0 DetailTitleBar.Parent = DetailFrame local DetailTitleCorner = Instance.new("UICorner") DetailTitleCorner.CornerRadius = UDim.new(0, 10) DetailTitleCorner.Parent = DetailTitleBar local DetailTitleFill = Instance.new("Frame") DetailTitleFill.Size = UDim2.new(1, 0, 0, 10) DetailTitleFill.Position = UDim2.new(0, 0, 1, -10) DetailTitleFill.BackgroundColor3 = Color3.fromRGB(28, 28, 40) DetailTitleFill.BorderSizePixel = 0 DetailTitleFill.Parent = DetailTitleBar local DetailTitleLabel = Instance.new("TextLabel") DetailTitleLabel.Size = UDim2.new(1, -50, 1, 0) DetailTitleLabel.Position = UDim2.new(0, 12, 0, 0) DetailTitleLabel.BackgroundTransparency = 1 DetailTitleLabel.Text = "事件详情" DetailTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 230) DetailTitleLabel.TextSize = 12 DetailTitleLabel.Font = Enum.Font.GothamBold DetailTitleLabel.TextXAlignment = Enum.TextXAlignment.Left DetailTitleLabel.Parent = DetailTitleBar local DetailCloseBtn = Instance.new("TextButton") DetailCloseBtn.Size = UDim2.new(0, 22, 0, 22) DetailCloseBtn.Position = UDim2.new(1, -28, 0, 4) DetailCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) DetailCloseBtn.Text = "×" DetailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) DetailCloseBtn.TextSize = 14 DetailCloseBtn.Font = Enum.Font.GothamBold DetailCloseBtn.Parent = DetailTitleBar local DetailCloseCorner = Instance.new("UICorner") DetailCloseCorner.CornerRadius = UDim.new(0, 5) DetailCloseCorner.Parent = DetailCloseBtn DetailCloseBtn.MouseButton1Click:Connect(function() 	DetailFrame.Visible = false end) local TypeTag = Instance.new("TextLabel") TypeTag.Size = UDim2.new(0.35, 0, 0, 20) TypeTag.Position = UDim2.new(0.04, 0, 0, 38) TypeTag.BackgroundColor3 = Color3.fromRGB(40, 40, 60) TypeTag.Text = "RemoteEvent" TypeTag.TextColor3 = Color3.fromRGB(100, 200, 255) TypeTag.TextSize = 11 TypeTag.Font = Enum.Font.GothamBold TypeTag.Parent = DetailFrame local TypeTagCorner = Instance.new("UICorner") TypeTagCorner.CornerRadius = UDim.new(0, 5) TypeTagCorner.Parent = TypeTag local PathLabel = Instance.new("TextLabel") PathLabel.Size = UDim2.new(0.92, 0, 0, 16) PathLabel.Position = UDim2.new(0.04, 0, 0, 64) PathLabel.BackgroundTransparency = 1 PathLabel.Text = "路径：" PathLabel.TextColor3 = Color3.fromRGB(160, 160, 200) PathLabel.TextSize = 10 PathLabel.Font = Enum.Font.Gotham PathLabel.TextXAlignment = Enum.TextXAlignment.Left PathLabel.Parent = DetailFrame local CodeBox = Instance.new("TextBox") CodeBox.Size = UDim2.new(0.92, 0, 0, 140) CodeBox.Position = UDim2.new(0.04, 0, 0, 86) CodeBox.BackgroundColor3 = Color3.fromRGB(14, 14, 20) CodeBox.Text = "" CodeBox.TextColor3 = Color3.fromRGB(180, 220, 180) CodeBox.TextSize = 10 CodeBox.Font = Enum.Font.Code CodeBox.MultiLine = true CodeBox.TextWrapped = true CodeBox.ClearTextOnFocus = false CodeBox.Parent = DetailFrame local CodeCorner = Instance.new("UICorner") CodeCorner.CornerRadius = UDim.new(0, 5) CodeCorner.Parent = CodeBox local CodeStroke = Instance.new("UIStroke") CodeStroke.Color = Color3.fromRGB(50, 50, 75) CodeStroke.Thickness = 1 CodeStroke.Parent = CodeBox local CodeTip = Instance.new("TextLabel") CodeTip.Size = UDim2.new(0.92, 0, 0, 14) CodeTip.Position = UDim2.new(0.04, 0, 0, 232) CodeTip.BackgroundTransparency = 1 CodeTip.Text = "↑ 自动生成的调用代码示例，可编辑后执行" CodeTip.TextColor3 = Color3.fromRGB(120, 120, 160) CodeTip.TextSize = 9 CodeTip.Font = Enum.Font.Gotham CodeTip.TextXAlignment = Enum.TextXAlignment.Left CodeTip.Parent = DetailFrame local function CreateDetailBtn(text, xPos, color) 	local btn = Instance.new("TextButton") 	btn.Size = UDim2.new(0.30, 0, 0, 24) 	btn.Position = UDim2.new(xPos, 0, 0, 254) 	btn.BackgroundColor3 = color 	btn.Text = text 	btn.TextColor3 = Color3.fromRGB(255, 255, 255) 	btn.Font = Enum.Font.Gotham 	btn.TextSize = 10 	btn.AutoButtonColor = false 	btn.Parent = DetailFrame 	local c = Instance.new("UICorner") 	c.CornerRadius = UDim.new(0, 5) 	c.Parent = btn 	btn.MouseEnter:Connect(function() 		TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = color:Lerp(Color3.new(1,1,1), 0.15)}):Play() 	end) 	btn.MouseLeave:Connect(function() 		TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = color}):Play() 	end) 	return btn end local CopyPathBtn = CreateDetailBtn("复制路径", 0.04, Color3.fromRGB(50, 100, 180)) local CopyCodeBtn = CreateDetailBtn("复制代码", 0.36, Color3.fromRGB(50, 150, 100)) local ExecuteBtn = CreateDetailBtn("执行代码", 0.68, Color3.fromRGB(180, 80, 50)) local DetailStatus = Instance.new("TextLabel") DetailStatus.Size = UDim2.new(0.92, 0, 0, 16) DetailStatus.Position = UDim2.new(0.04, 0, 0, 288) DetailStatus.BackgroundTransparency = 1 DetailStatus.Text = "" DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140) DetailStatus.TextSize = 10 DetailStatus.Font = Enum.Font.Gotham DetailStatus.TextXAlignment = Enum.TextXAlignment.Left DetailStatus.Parent = DetailFrame local allEvents = {} local allFunctions = {} local listItems = {} local selectedObj = nil local function PopulateList(filter) 	for _, item in ipairs(listItems) do 		item:Destroy() 	end 	listItems = {} 	local events, functions = ScanRemotes() 	allEvents = events 	allFunctions = functions 	local totalItems = 0 	local filterLower = filter and filter:lower() or "" 	local function AddItems(list, icon, color) 		for _, obj in ipairs(list) do 			local name = obj.Name 			if filterLower == "" or name:lower():find(filterLower) or obj:GetFullName():lower():find(filterLower) then 				totalItems += 1 				local item = Instance.new("TextButton") 				item.Size = UDim2.new(1, -6, 0, 26) 				item.BackgroundColor3 = Color3.fromRGB(28, 28, 38) 				item.Text = "" 				item.AutoButtonColor = false 				item.Parent = ScrollFrame 				local itemCorner = Instance.new("UICorner") 				itemCorner.CornerRadius = UDim.new(0, 4) 				itemCorner.Parent = item 				local iconLabel = Instance.new("TextLabel") 				iconLabel.Size = UDim2.new(0, 20, 1, 0) 				iconLabel.Position = UDim2.new(0, 6, 0, 0) 				iconLabel.BackgroundTransparency = 1 				iconLabel.Text = icon 				iconLabel.TextColor3 = color 				iconLabel.TextSize = 11 				iconLabel.Font = Enum.Font.GothamBold 				iconLabel.Parent = item 				local nameLabel = Instance.new("TextLabel") 				nameLabel.Size = UDim2.new(1, -30, 1, 0) 				nameLabel.Position = UDim2.new(0, 26, 0, 0) 				nameLabel.BackgroundTransparency = 1 				nameLabel.Text = name 				nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240) 				nameLabel.TextSize = 11 				nameLabel.Font = Enum.Font.Gotham 				nameLabel.TextXAlignment = Enum.TextXAlignment.Left 				nameLabel.Parent = item 				item.MouseEnter:Connect(function() 					if selectedObj ~= obj then 						TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(38, 38, 52)}):Play() 					end 				end) 				item.MouseLeave:Connect(function() 					if selectedObj ~= obj then 						TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play() 					end 				end) 				item.MouseButton1Click:Connect(function() 					selectedObj = obj 					for _, entry in ipairs(listItems) do 						TweenService:Create(entry.button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play() 						entry.nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240) 					end 					TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(40, 50, 90)}):Play() 					nameLabel.TextColor3 = Color3.fromRGB(120, 180, 255) 					DetailFrame.Visible = true 					DetailTitleLabel.Text = obj.Name 					PathLabel.Text = "路径：" .. obj:GetFullName() 					if obj:IsA("RemoteEvent") then 						TypeTag.Text = " RemoteEvent" 						TypeTag.TextColor3 = Color3.fromRGB(100, 200, 255) 						TypeTag.BackgroundColor3 = Color3.fromRGB(30, 50, 80) 					else 						TypeTag.Text = " RemoteFunction" 						TypeTag.TextColor3 = Color3.fromRGB(255, 200, 100) 						TypeTag.BackgroundColor3 = Color3.fromRGB(60, 45, 20) 					end 					CodeBox.Text = GenerateCode(obj) 					DetailStatus.Text = "" 				end) 				table.insert(listItems, {button = item, obj = obj, nameLabel = nameLabel}) 			end 		end 	end 	AddItems(events, "⚡", Color3.fromRGB(100, 200, 255)) 	AddItems(functions, "⚙", Color3.fromRGB(255, 200, 100)) 	StatsLabel.Text = string.format("事件: %d | 函数: %d | 显示: %d", #events, #functions, totalItems) 	ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalItems * 28) end CopyPathBtn.MouseButton1Click:Connect(function() 	if selectedObj then 		local ok = pcall(function() 			setclipboard(selectedObj:GetFullName()) 		end) 		if ok then 			DetailStatus.Text = "✓ 路径已复制到剪贴板" 			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140) 		else 			DetailStatus.Text = "✗ 复制失败：执行器不支持剪贴板" 			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100) 		end 	end end) CopyCodeBtn.MouseButton1Click:Connect(function() 	if selectedObj then 		local code = GenerateCode(selectedObj) 		local ok = pcall(function() 			setclipboard(code) 		end) 		if ok then 			DetailStatus.Text = "✓ 代码示例已复制到剪贴板" 			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140) 		else 			DetailStatus.Text = "✗ 复制失败：执行器不支持剪贴板" 			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100) 		end 	end end) ExecuteBtn.MouseButton1Click:Connect(function() 	if selectedObj then 		local code = CodeBox.Text 		local ok, err = pcall(function() 			loadstring(code)() 		end) 		if ok then 			DetailStatus.Text = "✓ 代码已执行" 			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140) 		else 			DetailStatus.Text = "✗ 执行失败：" .. tostring(err) 			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100) 		end 	end end) SaveAllBtn.MouseButton1Click:Connect(function() 	local events, functions = ScanRemotes() 	local content = "===== Roblox Query Event - 扫描结果 ===== " 	content = content .. "PlaceId: " .. game.PlaceId .. " " 	content = content .. "时间: " .. os.date("%Y-%m-%d %H:%M:%S") .. " " 	content = content .. string.format("事件: %d | 函数: %d ", #events, #functions) 	if #events > 0 then 		content = content .. "--- RemoteEvents --- " 		for _, e in ipairs(events) do 			content = content .. e:GetFullName() .. " " 		end 		content = content .. " " 	end 	if #functions > 0 then 		content = content .. "--- RemoteFunctions --- " 		for _, f in ipairs(functions) do 			content = content .. f:GetFullName() .. " " 		end 	end 	local folder = "/storage/emulated/0/Delta/Workspace/RQE" 	local fileName = folder .. "/RQEScan_" .. game.PlaceId .. ".txt" 	local ok, err = pcall(function() 		if isfolder and not isfolder(folder) then 			makefolder(folder) 		end 		writefile(fileName, content) 	end) 	if ok then 		StatsLabel.TextColor3 = Color3.fromRGB(80, 180, 255) 		StatsLabel.Text = "已保存到：" .. fileName 	else 		local fallbackOk = pcall(function() 			writefile("RQEScan_" .. game.PlaceId .. ".txt", content) 		end) 		if fallbackOk then 			StatsLabel.TextColor3 = Color3.fromRGB(220, 150, 80) 			StatsLabel.Text = "文件夹创建失败，已保存到默认位置" 		else 			StatsLabel.TextColor3 = Color3.fromRGB(220, 100, 100) 			StatsLabel.Text = "保存失败：" .. tostring(err) 		end 	end end) MinBtn.MouseButton1Click:Connect(function() 	MainFrame.Visible = false 	FloatFrame.Visible = true end) PopulateList()
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+if CoreGui:FindFirstChild("RQEGui") then
+	CoreGui.RQEGui:Destroy()
+end
+
+local function ScanRemotes()
+	local events = {}
+	local functions = {}
+	for _, obj in ipairs(game:GetDescendants()) do
+		if obj:IsA("RemoteEvent") then
+			table.insert(events, obj)
+		elseif obj:IsA("RemoteFunction") then
+			table.insert(functions, obj)
+		end
+	end
+	return events, functions
+end
+
+local function GenerateCode(obj)
+	local name = obj.Name
+	local fullName = obj:GetFullName()
+	local code = ""
+
+	if obj:IsA("RemoteEvent") then
+		code = "-- 触发远程事件: " .. name .. "\n"
+			.. "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")\n"
+			.. "local event = " .. fullName:gsub("%.", ":WaitForChild(\"") .. "\")\n"
+			.. "-- 简写路径:\n"
+			.. "-- local event = ReplicatedStorage:WaitForChild(\"" .. name .. "\")\n\n"
+			.. "event:FireServer()  -- 可传入参数\n"
+	else
+		code = "-- 调用远程函数: " .. name .. "\n"
+			.. "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")\n"
+			.. "local func = " .. fullName:gsub("%.", ":WaitForChild(\"") .. "\")\n"
+			.. "-- 简写路径:\n"
+			.. "-- local func = ReplicatedStorage:WaitForChild(\"" .. name .. "\")\n\n"
+			.. "local result = func:InvokeServer()  -- 可传入参数\n"
+	end
+
+	return code
+end
+
+local RQEGui = Instance.new("ScreenGui")
+RQEGui.Name = "RQEGui"
+RQEGui.Parent = CoreGui
+RQEGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+RQEGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+MainFrame.Visible = true
+MainFrame.Parent = RQEGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(70, 70, 100)
+MainStroke.Thickness = 1.5
+MainStroke.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 32)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleBarFill = Instance.new("Frame")
+TitleBarFill.Size = UDim2.new(1, 0, 0, 10)
+TitleBarFill.Position = UDim2.new(0, 0, 1, -10)
+TitleBarFill.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TitleBarFill.BorderSizePixel = 0
+TitleBarFill.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -80, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Roblox Query Event"
+TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+task.spawn(function()
+	while true do
+		for hue = 0, 1, 0.006 do
+			TitleLabel.TextColor3 = Color3.fromHSV(hue, 0.5, 1)
+			task.wait(0.03)
+		end
+	end
+end)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -28, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 14
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 5)
+CloseCorner.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+	RQEGui:Destroy()
+end)
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 22, 0, 22)
+MinBtn.Position = UDim2.new(1, -54, 0, 5)
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinBtn.Text = "—"
+MinBtn.TextColor3 = Color3.fromRGB(220, 220, 240)
+MinBtn.TextSize = 14
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 5)
+MinCorner.Parent = MinBtn
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(0.92, 0, 0, 16)
+StatsLabel.Position = UDim2.new(0.04, 0, 0, 34)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Text = "正在扫描..."
+StatsLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+StatsLabel.TextSize = 10
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.Parent = MainFrame
+
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(0.92, 0, 0, 250)
+ScrollFrame.Position = UDim2.new(0.04, 0, 0, 54)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 120)
+ScrollFrame.Parent = MainFrame
+
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 5)
+ScrollCorner.Parent = ScrollFrame
+
+local ScrollStroke = Instance.new("UIStroke")
+ScrollStroke.Color = Color3.fromRGB(50, 50, 75)
+ScrollStroke.Thickness = 1
+ScrollStroke.Parent = ScrollFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 2)
+ListLayout.Parent = ScrollFrame
+
+local SaveAllBtn = Instance.new("TextButton")
+SaveAllBtn.Size = UDim2.new(0.92, 0, 0, 26)
+SaveAllBtn.Position = UDim2.new(0.04, 0, 0, 308)
+SaveAllBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+SaveAllBtn.Text = "保存全部为 TXT"
+SaveAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveAllBtn.Font = Enum.Font.Gotham
+SaveAllBtn.TextSize = 11
+SaveAllBtn.AutoButtonColor = false
+SaveAllBtn.Parent = MainFrame
+
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 5)
+SaveCorner.Parent = SaveAllBtn
+
+SaveAllBtn.MouseEnter:Connect(function()
+	TweenService:Create(SaveAllBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(55, 55, 80)}):Play()
+end)
+SaveAllBtn.MouseLeave:Connect(function()
+	TweenService:Create(SaveAllBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 60)}):Play()
+end)
+
+local FloatFrame = Instance.new("Frame")
+FloatFrame.Name = "FloatFrame"
+FloatFrame.Size = UDim2.new(0, 48, 0, 48)
+FloatFrame.Position = UDim2.new(1, -66, 1, -66)
+FloatFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+FloatFrame.BorderSizePixel = 0
+FloatFrame.Active = true
+FloatFrame.Visible = false
+FloatFrame.Parent = RQEGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(0, 12)
+FloatCorner.Parent = FloatFrame
+
+local FloatStroke = Instance.new("UIStroke")
+FloatStroke.Color = Color3.fromRGB(100, 100, 160)
+FloatStroke.Thickness = 2
+FloatStroke.Parent = FloatFrame
+
+local FloatLabel = Instance.new("TextLabel")
+FloatLabel.Size = UDim2.new(1, 0, 1, 0)
+FloatLabel.BackgroundTransparency = 1
+FloatLabel.Text = "RQE"
+FloatLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+FloatLabel.TextSize = 14
+FloatLabel.Font = Enum.Font.GothamBlack
+FloatLabel.Parent = FloatFrame
+
+task.spawn(function()
+	while true do
+		for hue = 0, 1, 0.006 do
+			FloatLabel.TextColor3 = Color3.fromHSV(hue, 0.6, 1)
+			FloatStroke.Color = Color3.fromHSV(hue, 0.4, 0.8)
+			task.wait(0.03)
+		end
+	end
+end)
+
+local floatDragging = false
+local floatDragStartPos = nil
+local floatFrameStartPos = nil
+local floatClickStart = nil
+
+local function isValidInput(inputType)
+	return inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch
+end
+
+FloatFrame.InputBegan:Connect(function(input)
+	if isValidInput(input.UserInputType) then
+		floatDragStartPos = Vector2.new(input.Position.X, input.Position.Y)
+		floatFrameStartPos = Vector2.new(FloatFrame.AbsolutePosition.X, FloatFrame.AbsolutePosition.Y)
+		floatClickStart = floatDragStartPos
+		floatDragging = true
+	end
+end)
+
+FloatFrame.InputChanged:Connect(function(input)
+	if floatDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = Vector2.new(input.Position.X, input.Position.Y) - floatDragStartPos
+		local newX = floatFrameStartPos.X + delta.X
+		local newY = floatFrameStartPos.Y + delta.Y
+		FloatFrame.Position = UDim2.new(0, newX, 0, newY)
+	end
+end)
+
+FloatFrame.InputEnded:Connect(function(input)
+	if isValidInput(input.UserInputType) then
+		if floatClickStart then
+			local delta = Vector2.new(input.Position.X, input.Position.Y) - floatClickStart
+			if delta.Magnitude < 5 then
+				MainFrame.Visible = true
+				FloatFrame.Visible = false
+			end
+		end
+		floatDragging = false
+		floatClickStart = nil
+		floatDragStartPos = nil
+		floatFrameStartPos = nil
+	end
+end)
+
+local DetailFrame = Instance.new("Frame")
+DetailFrame.Name = "DetailFrame"
+DetailFrame.Size = UDim2.new(0, 340, 0, 320)
+DetailFrame.Position = UDim2.new(0.5, -170, 0.5, -160)
+DetailFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+DetailFrame.BorderSizePixel = 0
+DetailFrame.Active = true
+DetailFrame.Draggable = true
+DetailFrame.ClipsDescendants = true
+DetailFrame.Visible = false
+DetailFrame.Parent = RQEGui
+
+local DetailCorner = Instance.new("UICorner")
+DetailCorner.CornerRadius = UDim.new(0, 10)
+DetailCorner.Parent = DetailFrame
+
+local DetailStroke = Instance.new("UIStroke")
+DetailStroke.Color = Color3.fromRGB(70, 70, 110)
+DetailStroke.Thickness = 1.5
+DetailStroke.Parent = DetailFrame
+
+local DetailTitleBar = Instance.new("Frame")
+DetailTitleBar.Size = UDim2.new(1, 0, 0, 30)
+DetailTitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+DetailTitleBar.BorderSizePixel = 0
+DetailTitleBar.Parent = DetailFrame
+
+local DetailTitleCorner = Instance.new("UICorner")
+DetailTitleCorner.CornerRadius = UDim.new(0, 10)
+DetailTitleCorner.Parent = DetailTitleBar
+
+local DetailTitleFill = Instance.new("Frame")
+DetailTitleFill.Size = UDim2.new(1, 0, 0, 10)
+DetailTitleFill.Position = UDim2.new(0, 0, 1, -10)
+DetailTitleFill.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+DetailTitleFill.BorderSizePixel = 0
+DetailTitleFill.Parent = DetailTitleBar
+
+local DetailTitleLabel = Instance.new("TextLabel")
+DetailTitleLabel.Size = UDim2.new(1, -50, 1, 0)
+DetailTitleLabel.Position = UDim2.new(0, 12, 0, 0)
+DetailTitleLabel.BackgroundTransparency = 1
+DetailTitleLabel.Text = "事件详情"
+DetailTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 230)
+DetailTitleLabel.TextSize = 12
+DetailTitleLabel.Font = Enum.Font.GothamBold
+DetailTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+DetailTitleLabel.Parent = DetailTitleBar
+
+local DetailCloseBtn = Instance.new("TextButton")
+DetailCloseBtn.Size = UDim2.new(0, 22, 0, 22)
+DetailCloseBtn.Position = UDim2.new(1, -28, 0, 4)
+DetailCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+DetailCloseBtn.Text = "×"
+DetailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetailCloseBtn.TextSize = 14
+DetailCloseBtn.Font = Enum.Font.GothamBold
+DetailCloseBtn.Parent = DetailTitleBar
+
+local DetailCloseCorner = Instance.new("UICorner")
+DetailCloseCorner.CornerRadius = UDim.new(0, 5)
+DetailCloseCorner.Parent = DetailCloseBtn
+
+DetailCloseBtn.MouseButton1Click:Connect(function()
+	DetailFrame.Visible = false
+end)
+
+local TypeTag = Instance.new("TextLabel")
+TypeTag.Size = UDim2.new(0.35, 0, 0, 20)
+TypeTag.Position = UDim2.new(0.04, 0, 0, 38)
+TypeTag.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+TypeTag.Text = "RemoteEvent"
+TypeTag.TextColor3 = Color3.fromRGB(100, 200, 255)
+TypeTag.TextSize = 11
+TypeTag.Font = Enum.Font.GothamBold
+TypeTag.Parent = DetailFrame
+
+local TypeTagCorner = Instance.new("UICorner")
+TypeTagCorner.CornerRadius = UDim.new(0, 5)
+TypeTagCorner.Parent = TypeTag
+
+local PathLabel = Instance.new("TextLabel")
+PathLabel.Size = UDim2.new(0.92, 0, 0, 16)
+PathLabel.Position = UDim2.new(0.04, 0, 0, 64)
+PathLabel.BackgroundTransparency = 1
+PathLabel.Text = "路径："
+PathLabel.TextColor3 = Color3.fromRGB(160, 160, 200)
+PathLabel.TextSize = 10
+PathLabel.Font = Enum.Font.Gotham
+PathLabel.TextXAlignment = Enum.TextXAlignment.Left
+PathLabel.Parent = DetailFrame
+
+local CodeBox = Instance.new("TextBox")
+CodeBox.Size = UDim2.new(0.92, 0, 0, 140)
+CodeBox.Position = UDim2.new(0.04, 0, 0, 86)
+CodeBox.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+CodeBox.Text = ""
+CodeBox.TextColor3 = Color3.fromRGB(180, 220, 180)
+CodeBox.TextSize = 10
+CodeBox.Font = Enum.Font.Code
+CodeBox.MultiLine = true
+CodeBox.TextWrapped = true
+CodeBox.ClearTextOnFocus = false
+CodeBox.Parent = DetailFrame
+
+local CodeCorner = Instance.new("UICorner")
+CodeCorner.CornerRadius = UDim.new(0, 5)
+CodeCorner.Parent = CodeBox
+
+local CodeStroke = Instance.new("UIStroke")
+CodeStroke.Color = Color3.fromRGB(50, 50, 75)
+CodeStroke.Thickness = 1
+CodeStroke.Parent = CodeBox
+
+local CodeTip = Instance.new("TextLabel")
+CodeTip.Size = UDim2.new(0.92, 0, 0, 14)
+CodeTip.Position = UDim2.new(0.04, 0, 0, 232)
+CodeTip.BackgroundTransparency = 1
+CodeTip.Text = "↑ 自动生成的调用代码示例，可编辑后执行"
+CodeTip.TextColor3 = Color3.fromRGB(120, 120, 160)
+CodeTip.TextSize = 9
+CodeTip.Font = Enum.Font.Gotham
+CodeTip.TextXAlignment = Enum.TextXAlignment.Left
+CodeTip.Parent = DetailFrame
+
+local function CreateDetailBtn(text, xPos, color)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.30, 0, 0, 24)
+	btn.Position = UDim2.new(xPos, 0, 0, 254)
+	btn.BackgroundColor3 = color
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 10
+	btn.AutoButtonColor = false
+	btn.Parent = DetailFrame
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 5)
+	c.Parent = btn
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = color:Lerp(Color3.new(1,1,1), 0.15)}):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = color}):Play()
+	end)
+
+	return btn
+end
+
+local CopyPathBtn = CreateDetailBtn("复制路径", 0.04, Color3.fromRGB(50, 100, 180))
+local CopyCodeBtn = CreateDetailBtn("复制代码", 0.36, Color3.fromRGB(50, 150, 100))
+local ExecuteBtn = CreateDetailBtn("执行代码", 0.68, Color3.fromRGB(180, 80, 50))
+
+local DetailStatus = Instance.new("TextLabel")
+DetailStatus.Size = UDim2.new(0.92, 0, 0, 16)
+DetailStatus.Position = UDim2.new(0.04, 0, 0, 288)
+DetailStatus.BackgroundTransparency = 1
+DetailStatus.Text = ""
+DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140)
+DetailStatus.TextSize = 10
+DetailStatus.Font = Enum.Font.Gotham
+DetailStatus.TextXAlignment = Enum.TextXAlignment.Left
+DetailStatus.Parent = DetailFrame
+
+local allEvents = {}
+local allFunctions = {}
+local listItems = {}
+local selectedObj = nil
+
+local function PopulateList(filter)
+	for _, item in ipairs(listItems) do
+		item:Destroy()
+	end
+	listItems = {}
+
+	local events, functions = ScanRemotes()
+	allEvents = events
+	allFunctions = functions
+
+	local totalItems = 0
+	local filterLower = filter and filter:lower() or ""
+
+	local function AddItems(list, icon, color)
+		for _, obj in ipairs(list) do
+			local name = obj.Name
+			if filterLower == "" or name:lower():find(filterLower) or obj:GetFullName():lower():find(filterLower) then
+				totalItems += 1
+
+				local item = Instance.new("TextButton")
+				item.Size = UDim2.new(1, -6, 0, 26)
+				item.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+				item.Text = ""
+				item.AutoButtonColor = false
+				item.Parent = ScrollFrame
+
+				local itemCorner = Instance.new("UICorner")
+				itemCorner.CornerRadius = UDim.new(0, 4)
+				itemCorner.Parent = item
+
+				local iconLabel = Instance.new("TextLabel")
+				iconLabel.Size = UDim2.new(0, 20, 1, 0)
+				iconLabel.Position = UDim2.new(0, 6, 0, 0)
+				iconLabel.BackgroundTransparency = 1
+				iconLabel.Text = icon
+				iconLabel.TextColor3 = color
+				iconLabel.TextSize = 11
+				iconLabel.Font = Enum.Font.GothamBold
+				iconLabel.Parent = item
+
+				local nameLabel = Instance.new("TextLabel")
+				nameLabel.Size = UDim2.new(1, -30, 1, 0)
+				nameLabel.Position = UDim2.new(0, 26, 0, 0)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.Text = name
+				nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+				nameLabel.TextSize = 11
+				nameLabel.Font = Enum.Font.Gotham
+				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				nameLabel.Parent = item
+
+				item.MouseEnter:Connect(function()
+					if selectedObj ~= obj then
+						TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(38, 38, 52)}):Play()
+					end
+				end)
+				item.MouseLeave:Connect(function()
+					if selectedObj ~= obj then
+						TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play()
+					end
+				end)
+
+				item.MouseButton1Click:Connect(function()
+					selectedObj = obj
+
+					for _, entry in ipairs(listItems) do
+						TweenService:Create(entry.button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play()
+						entry.nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+					end
+
+					TweenService:Create(item, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(40, 50, 90)}):Play()
+					nameLabel.TextColor3 = Color3.fromRGB(120, 180, 255)
+
+					DetailFrame.Visible = true
+					DetailTitleLabel.Text = obj.Name
+					PathLabel.Text = "路径：" .. obj:GetFullName()
+
+					if obj:IsA("RemoteEvent") then
+						TypeTag.Text = " RemoteEvent"
+						TypeTag.TextColor3 = Color3.fromRGB(100, 200, 255)
+						TypeTag.BackgroundColor3 = Color3.fromRGB(30, 50, 80)
+					else
+						TypeTag.Text = " RemoteFunction"
+						TypeTag.TextColor3 = Color3.fromRGB(255, 200, 100)
+						TypeTag.BackgroundColor3 = Color3.fromRGB(60, 45, 20)
+					end
+
+					CodeBox.Text = GenerateCode(obj)
+					DetailStatus.Text = ""
+				end)
+
+				table.insert(listItems, {button = item, obj = obj, nameLabel = nameLabel})
+			end
+		end
+	end
+
+	AddItems(events, "⚡", Color3.fromRGB(100, 200, 255))
+	AddItems(functions, "⚙", Color3.fromRGB(255, 200, 100))
+
+	StatsLabel.Text = string.format("事件: %d | 函数: %d | 显示: %d", #events, #functions, totalItems)
+	ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalItems * 28)
+end
+
+CopyPathBtn.MouseButton1Click:Connect(function()
+	if selectedObj then
+		local ok = pcall(function()
+			setclipboard(selectedObj:GetFullName())
+		end)
+		if ok then
+			DetailStatus.Text = "✓ 路径已复制到剪贴板"
+			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140)
+		else
+			DetailStatus.Text = "✗ 复制失败：执行器不支持剪贴板"
+			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100)
+		end
+	end
+end)
+
+CopyCodeBtn.MouseButton1Click:Connect(function()
+	if selectedObj then
+		local code = GenerateCode(selectedObj)
+		local ok = pcall(function()
+			setclipboard(code)
+		end)
+		if ok then
+			DetailStatus.Text = "✓ 代码示例已复制到剪贴板"
+			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140)
+		else
+			DetailStatus.Text = "✗ 复制失败：执行器不支持剪贴板"
+			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100)
+		end
+	end
+end)
+
+ExecuteBtn.MouseButton1Click:Connect(function()
+	if selectedObj then
+		local code = CodeBox.Text
+		local ok, err = pcall(function()
+			loadstring(code)()
+		end)
+		if ok then
+			DetailStatus.Text = "✓ 代码已执行"
+			DetailStatus.TextColor3 = Color3.fromRGB(80, 220, 140)
+		else
+			DetailStatus.Text = "✗ 执行失败：" .. tostring(err)
+			DetailStatus.TextColor3 = Color3.fromRGB(220, 100, 100)
+		end
+	end
+end)
+
+SaveAllBtn.MouseButton1Click:Connect(function()
+	local events, functions = ScanRemotes()
+	local content = "===== Roblox Query Event - 扫描结果 =====
+"
+	content = content .. "PlaceId: " .. game.PlaceId .. "
+"
+	content = content .. "时间: " .. os.date("%Y-%m-%d %H:%M:%S") .. "
+"
+	content = content .. string.format("事件: %d | 函数: %d
+
+", #events, #functions)
+
+	if #events > 0 then
+		content = content .. "--- RemoteEvents ---
+"
+		for _, e in ipairs(events) do
+			content = content .. e:GetFullName() .. "
+"
+		end
+		content = content .. "
+"
+	end
+
+	if #functions > 0 then
+		content = content .. "--- RemoteFunctions ---
+"
+		for _, f in ipairs(functions) do
+			content = content .. f:GetFullName() .. "
+"
+		end
+	end
+
+	local folder = "/storage/emulated/0/Delta/Workspace/RQE"
+	local fileName = folder .. "/RQEScan_" .. game.PlaceId .. ".txt"
+
+	local ok, err = pcall(function()
+		if isfolder and not isfolder(folder) then
+			makefolder(folder)
+		end
+		writefile(fileName, content)
+	end)
+
+	if ok then
+		StatsLabel.TextColor3 = Color3.fromRGB(80, 180, 255)
+		StatsLabel.Text = "已保存到：" .. fileName
+	else
+		local fallbackOk = pcall(function()
+			writefile("RQEScan_" .. game.PlaceId .. ".txt", content)
+		end)
+		if fallbackOk then
+			StatsLabel.TextColor3 = Color3.fromRGB(220, 150, 80)
+			StatsLabel.Text = "文件夹创建失败，已保存到默认位置"
+		else
+			StatsLabel.TextColor3 = Color3.fromRGB(220, 100, 100)
+			StatsLabel.Text = "保存失败：" .. tostring(err)
+		end
+	end
+end)
+
+MinBtn.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+	FloatFrame.Visible = true
+end)
+
+PopulateList()
