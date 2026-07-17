@@ -1,0 +1,192 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "RQE_GUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local function round(obj, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(radius, 0)
+	c.Parent = obj
+end
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 260, 0, 230)
+main.Position = UDim2.new(0.5, 0, 0, 16)
+main.AnchorPoint = Vector2.new(0.5, 0)
+main.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+main.BackgroundTransparency = 0.15
+main.Parent = gui
+round(main, 0.12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 34)
+title.BackgroundTransparency = 1
+title.Text = "RQE 执行器"
+title.TextColor3 = Color3.fromRGB(230, 230, 230)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = main
+
+local codeBox = Instance.new("TextBox")
+codeBox.Size = UDim2.new(1, -20, 0, 64)
+codeBox.Position = UDim2.new(0, 10, 0, 40)
+codeBox.PlaceholderText = "请输入代码"
+codeBox.Text = ""
+codeBox.TextWrapped = true
+codeBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+codeBox.TextColor3 = Color3.new(1, 1, 1)
+codeBox.Font = Enum.Font.Gotham
+codeBox.TextSize = 14
+codeBox.ClearTextOnFocus = false
+codeBox.Parent = main
+round(codeBox, 0.08)
+
+local freqBox = Instance.new("TextBox")
+freqBox.Size = UDim2.new(1, -20, 0, 30)
+freqBox.Position = UDim2.new(0, 10, 0, 112)
+freqBox.PlaceholderText = "执行频率（秒）"
+freqBox.Text = "1"
+freqBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+freqBox.TextColor3 = Color3.new(1, 1, 1)
+freqBox.Font = Enum.Font.Gotham
+freqBox.TextSize = 14
+freqBox.Parent = main
+round(freqBox, 0.08)
+
+local runBtn = Instance.new("TextButton")
+runBtn.Size = UDim2.new(1, -20, 0, 34)
+runBtn.Position = UDim2.new(0, 10, 0, 152)
+runBtn.Text = "执 行"
+runBtn.Font = Enum.Font.GothamBold
+runBtn.TextSize = 15
+runBtn.TextColor3 = Color3.new(1, 1, 1)
+runBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+runBtn.Parent = main
+round(runBtn, 0.1)
+
+local grad = Instance.new("UIGradient")
+grad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 120)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 140, 90))}
+grad.Rotation = 90
+grad.Parent = runBtn
+
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 30, 0, 30)
+miniBtn.Position = UDim2.new(1, -36, 0, 4)
+miniBtn.Text = "－"
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.TextSize = 18
+miniBtn.TextColor3 = Color3.new(1, 1, 1)
+miniBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+miniBtn.Parent = main
+round(miniBtn, 1)
+
+local ball = Instance.new("TextButton")
+ball.Name = "RQE_Ball"
+ball.Size = UDim2.new(0, 56, 0, 56)
+ball.Position = UDim2.new(1, -70, 1, -70)
+ball.AnchorPoint = Vector2.new(0, 0)
+ball.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+ball.Text = "RQE"
+ball.TextColor3 = Color3.new(1, 1, 1)
+ball.Font = Enum.Font.GothamBold
+ball.TextSize = 14
+ball.Visible = false
+ball.Active = true
+ball.Parent = gui
+round(ball, 1)
+
+local ballGlow = Instance.new("UIGradient")
+ballGlow.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 100, 200))}
+ballGlow.Rotation = 90
+ballGlow.Parent = ball
+
+local ballStroke = Instance.new("UIStroke")
+ballStroke.Color = Color3.fromRGB(0, 180, 255)
+ballStroke.Thickness = 2
+ballStroke.Parent = ball
+
+local ballShadow = Instance.new("UIStroke")
+ballShadow.Color = Color3.fromRGB(0, 0, 0)
+ballShadow.Transparency = 0.6
+ballShadow.Thickness = 1
+ballShadow.Parent = ball
+
+local dragging = false
+local dragStartPos = nil
+local ballStartPos = nil
+local clickStartPos = nil
+local dragThreshold = 8
+
+ball.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStartPos = Vector2.new(input.Position.X, input.Position.Y)
+		ballStartPos = Vector2.new(ball.AbsolutePosition.X, ball.AbsolutePosition.Y)
+		clickStartPos = dragStartPos
+		TweenService:Create(ball, TweenInfo.new(0.1), {Size = UDim2.new(0, 62, 0, 62)}):Play()
+	end
+end)
+
+ball.InputChanged:Connect(function(input)
+	if dragging then
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			local delta = Vector2.new(input.Position.X, input.Position.Y) - dragStartPos
+			local screenSize = workspace.CurrentCamera.ViewportSize
+			local newX = math.clamp(ballStartPos.X + delta.X, 0, screenSize.X - ball.AbsoluteSize.X)
+			local newY = math.clamp(ballStartPos.Y + delta.Y, 0, screenSize.Y - ball.AbsoluteSize.Y)
+			ball.Position = UDim2.new(0, newX, 0, newY)
+		end
+	end
+end)
+
+ball.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+		TweenService:Create(ball, TweenInfo.new(0.1), {Size = UDim2.new(0, 56, 0, 56)}):Play()
+		if clickStartPos then
+			local totalDelta = Vector2.new(input.Position.X, input.Position.Y) - clickStartPos
+			if totalDelta.Magnitude < dragThreshold then
+				main.Visible = true
+				ball.Visible = false
+			end
+		end
+		clickStartPos = nil
+		dragStartPos = nil
+		ballStartPos = nil
+	end
+end)
+
+local running = false
+local connection
+
+local function stop()
+	running = false
+	runBtn.Text = "执 行"
+	TweenService:Create(runBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 170, 100)}):Play()
+	if connection then connection:Disconnect() end
+end
+
+local function start()
+	local freq = tonumber(freqBox.Text) or 1
+	running = true
+	runBtn.Text = "停 止"
+	TweenService:Create(runBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 60, 60)}):Play()
+	connection = RunService.Heartbeat:Connect(function()
+		loadstring(codeBox.Text)()
+		wait(freq)
+	end)
+end
+
+runBtn.MouseButton1Click:Connect(function()
+	if running then stop() else start() end
+end)
+
+miniBtn.MouseButton1Click:Connect(function()
+	main.Visible = false
+	ball.Visible = true
+end)
